@@ -16,7 +16,8 @@ import os
 import argparse
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceInstructEmbeddings
+from langchain_community.embeddings import HuggingFaceInstructEmbeddings
+
 
 def build_and_save_index(docs_path, output_path):
     """
