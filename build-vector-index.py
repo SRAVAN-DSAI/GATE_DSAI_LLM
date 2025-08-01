@@ -1,23 +1,8 @@
-# =============================================================================
-#
-# build_index.py
-#
-# PURPOSE: This script is a self-contained utility to build a FAISS vector
-#          index from a directory of PDF documents. It loads the documents,
-#          generates embeddings using an Instructor model, and saves the
-#          resulting index to a specified output directory.
-#
-# USAGE: Run this script from the command line or a notebook cell:
-#        !python build_index.py
-#
-# =============================================================================
-
 import os
 import argparse
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceInstructEmbeddings
-
+from langchain_huggingface import HuggingFaceEmbeddings
 
 def build_and_save_index(docs_path, output_path):
     """
@@ -52,11 +37,22 @@ def build_and_save_index(docs_path, output_path):
         return
     print(f"   -> Total document chunks loaded: {len(all_docs)}")
 
-    # --- Step 2: Initialize Embedding Model ---
-    print("2. Initializing Instructor embedding model...")
-    embedding_model_name = "hkunlp/instructor-large"
-    embeddings = HuggingFaceInstructEmbeddings(model_name=embedding_model_name)
-    print("   -> Model initialized.")
+    # --- Step 2: Initialize Embedding Model from Kaggle Input ---
+    print("2. Initializing BGE embedding model from local Kaggle path...")
+    
+    # --- UPDATED MODEL PATH ---
+    # This now points to the model you added to your Kaggle notebook,
+    # which avoids a slow download from the internet.
+    embedding_model_name = "/kaggle/input/baaibge-en-icl/pytorch/default/1"
+    
+    # Check if the model path exists
+    if not os.path.exists(embedding_model_name):
+        print(f"ERROR: Kaggle model not found at '{embedding_model_name}'.")
+        print("Please ensure you have added the 'bge-large-en-v1-5' model to your notebook.")
+        return
+        
+    embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name)
+    print("   -> Model initialized successfully.")
 
     # --- Step 3: Create and Save Index ---
     print("3. Creating FAISS vector index... (This may take several minutes)")
@@ -76,7 +72,6 @@ def build_and_save_index(docs_path, output_path):
 if __name__ == "__main__":
     # Define the default input and output paths for the Kaggle environment
     KAGGLE_INPUT_DIR = "/kaggle/input/gate-dsai-llm"
-    KAGGLE_OUTPUT_DIR = "/kaggle/input/gate-dsai-llm/my_vector_index"
+    KAGGLE_OUTPUT_DIR = "/kaggle/working/my_vector_index"
     
     build_and_save_index(KAGGLE_INPUT_DIR, KAGGLE_OUTPUT_DIR)
-
