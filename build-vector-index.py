@@ -1,21 +1,19 @@
 import os
 import argparse
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+# --- UPDATED IMPORT ---
+# We now use HuggingFaceInstructEmbeddings for the new model.
+from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 
 def build_and_save_index(docs_path, output_path):
     """
     Loads PDFs from a directory, creates a FAISS vector index, and saves it.
-
-    Args:
-        docs_path (str): The path to the directory containing PDF files.
-        output_path (str): The path to save the created FAISS index.
     """
     print(f"--- Starting Index Build Process ---")
 
     # --- Step 1: Load Documents ---
-    print(f"1. Loading documents from '{docs_path}'...")
+    print(f"1. Loading documents from '{docs_path}' using PyMuPDF...")
     all_docs = []
     if not os.path.exists(docs_path):
         print(f"ERROR: Document path not found: {docs_path}")
@@ -26,8 +24,8 @@ def build_and_save_index(docs_path, output_path):
             if file.endswith(".pdf"):
                 try:
                     file_path = os.path.join(root, file)
-                    loader = PyPDFLoader(file_path)
-                    loaded_docs = loader.load_and_split()
+                    loader = PyMuPDFLoader(file_path)
+                    loaded_docs = loader.load()
                     all_docs.extend(loaded_docs)
                 except Exception as e:
                     print(f"   -> ERROR loading {file}: {e}")
@@ -37,21 +35,20 @@ def build_and_save_index(docs_path, output_path):
         return
     print(f"   -> Total document chunks loaded: {len(all_docs)}")
 
-    # --- Step 2: Initialize Embedding Model from Kaggle Input ---
-    print("2. Initializing BGE embedding model from local Kaggle path...")
+    # --- Step 2: Initialize Instruction-Tuned Embedding Model ---
+    print("2. Initializing hkunlp/instructor-xl embedding model...")
+    print("   (The first run will download the model, which may take some time.)")
     
-    # --- UPDATED MODEL PATH ---
-    # This now points to the model you added to your Kaggle notebook,
-    # which avoids a slow download from the internet.
-    embedding_model_name = "/kaggle/input/baaibge-en-icl/pytorch/default/1"
+    # --- UPDATED MODEL ---
+    # This model is specifically designed for understanding technical text.
+    embedding_model_name = "hkunlp/instructor-xl"
     
-    # Check if the model path exists
-    if not os.path.exists(embedding_model_name):
-        print(f"ERROR: Kaggle model not found at '{embedding_model_name}'.")
-        print("Please ensure you have added the 'bge-large-en-v1-5' model to your notebook.")
-        return
-        
-    embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name)
+    # We provide specific instructions to the model to optimize it for our task.
+    # This tells the model how to handle the documents for the best retrieval performance.
+    embeddings = HuggingFaceInstructEmbeddings(
+        model_name=embedding_model_name,
+        embed_instruction="Represent the scientific document for retrieval: "
+    )
     print("   -> Model initialized successfully.")
 
     # --- Step 3: Create and Save Index ---
